@@ -384,8 +384,11 @@ public class Plan {
                 Pixel.PixelRole role = pixel.getPixelRole();
                 if(role == Pixel.PixelRole.DATA || role == Pixel.PixelRole.CHECK) {
                     int offset = pixel.getOffset();
-                    if ((bytes[offset/8]&(1<<(7-offset&7))) != 0) {
-                        pixel.xorPixelValue(Pixel.BLACK.getPixelValue());
+                    int value = (bytes[offset/8]>>(7-offset&7))&0x1;
+                    if((pixel.getPixelValue()&Pixel.INVERT.getPixelValue()) != 0) {
+                        pixel.xorPixelValue(value);
+                    } else {
+                        pixel.setPixelValue(value);
                     }
                 }
 

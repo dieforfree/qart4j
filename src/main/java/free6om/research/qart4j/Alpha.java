@@ -8,6 +8,10 @@ public class Alpha implements Encoding {
 
     private String alphaNumbers;
 
+    public Alpha(String alphaNumbers) {
+        this.alphaNumbers = alphaNumbers;
+    }
+
     @Override
     public String validate() {
         if(alphaNumbers == null) return null;

@@ -245,8 +245,8 @@ public class Image {
 
             // Choose pixels.
             BitBlock[] bitBlocks = new BitBlock[plan.getNumberOfBlocks()];
-            for (int blocknum = 0; blocknum < plan.getNumberOfBlocks(); blocknum++) {
-                if (blocknum == plan.getNumberOfBlocks()-numberOfExtraBytes) {
+            for (int blockNumber = 0; blockNumber < plan.getNumberOfBlocks(); blockNumber++) {
+                if (blockNumber == plan.getNumberOfBlocks()-numberOfExtraBytes) {
                     numberOfDataBytesPerBlock++;
                 }
 
@@ -257,7 +257,7 @@ public class Image {
                 BitBlock bitBlock = new BitBlock(numberOfDataBytesPerBlock, numberOfCheckBytesPerBlock, encoder,
                         data, dataOffset/8,
                         data, plan.getNumberOfDataBytes() + checkOffset/8);
-                bitBlocks[blocknum] = bitBlock;
+                bitBlocks[blockNumber] = bitBlock;
 
                 // Determine which bits in this block we can try to edit.
                 int low = 0, high = numberOfDataBytesPerBlock*8;

@@ -24,14 +24,16 @@ public class App {
         PropertyConfigurator.configure("src/main/config/log4j.properties");
 
         try {
-//            Image image = new Image("input.png", 4, 4, "QR Code Symbol", 1, 2, 2, 4, 0, 0, false, System.currentTimeMillis(), false, false, false);
+//            Plan plan = Plan.newPlan(new Version(7), Level.Q, new Mask(3));
+//            BitMatrix bitMatrix = Plan.encode(plan, 4, 2, new Raw("QR Code Symbol 测试#"), new Number("0123456789"), new Alpha("%0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"));
 
-            Plan plan = Plan.newPlan(new Version(1), Level.L, new Mask(1));
-            BitMatrix bitMatrix = Plan.encode(plan, 4, 2, new Raw("QR Code Symbol"));
+//            Plan plan = Plan.newPlan(new Version(6), Level.L, new Mask(2));
+//            BitMatrix bitMatrix = Plan.encode(plan, 4, 2, new Raw("http://flkurl.com/mixin#"), new Number("341336767999687512426681334674855848685490760993186151597244699341082462453038256905008000309310469341341340000000000682694128232341256037999999170682941342682253341375999999427041330640952680347298259336021911346094965653290174699880627685898640359505341341712"));
+
+            Image image = new Image("input.png", 4, 4, "http://flkurl.com/mixin", 6, 2, 2, 4, 0, 0, false, System.currentTimeMillis(), false, false, false);
+            BitMatrix bitMatrix = image.encode();
             MatrixToImageWriter.writeToPath(bitMatrix, "PNG", Paths.get("output.png"));
-        } catch (IOException e) {
-            LOGGER.error("new image error", e);
-        } catch (QArtException e) {
+        } catch (Exception e) {
             LOGGER.error("encode error", e);
         }
 
