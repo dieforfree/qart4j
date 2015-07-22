@@ -1,8 +1,6 @@
 package free6om.research.qart4j;
 
 import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.encoder.ByteMatrix;
-import com.google.zxing.qrcode.encoder.QRCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,32 +78,9 @@ public class Plan {
         this.pixels = pixels;
     }
 
-    private static int countDataPixel(Plan plan) {
-        int count = 0;
-        Pixel[][] pixels = plan.pixels;
-        for(int y = 0;y < pixels.length;y++) {
-            for(int x = 0;x < pixels[y].length;x++) {
-                try {
-                    if (pixels[y][x].getPixelRole().ordinal() == 0) {
-                        count++;
-                    }
-                }catch (NullPointerException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        return count;
-    }
-
     public static Plan newPlan(Version version, Level level, Mask mask) throws QArtException {
         Plan plan = versionPlan(version);
-        int count = countDataPixel(plan);
-        LOGGER.debug("version plan pixels {}", count);
-
         formatPlan(plan, level, mask);
-        count = countDataPixel(plan);
-        LOGGER.debug("format plan pixels {}", count);
 
         levelPlan(plan, version, level);
         maskPlan(plan, mask);
@@ -235,17 +210,13 @@ public class Plan {
             if (x == 7) { // vertical timing strip
                 x--;
             }
-            try {
-                for (int y = 0; y < size; y++) {
-                    if (plan.pixels[y][x - 1].getPixelRole().ordinal() == 0) {
-                        plan.pixels[y][x - 1] = src[srcIndex++];
-                    }
-                    if (plan.pixels[y][x - 2].getPixelRole().ordinal() == 0) {
-                        plan.pixels[y][x - 2] = src[srcIndex++];
-                    }
+            for (int y = 0; y < size; y++) {
+                if (plan.pixels[y][x - 1].getPixelRole().ordinal() == 0) {
+                    plan.pixels[y][x - 1] = src[srcIndex++];
                 }
-            }catch (ArrayIndexOutOfBoundsException e) {
-                e.printStackTrace();
+                if (plan.pixels[y][x - 2].getPixelRole().ordinal() == 0) {
+                    plan.pixels[y][x - 2] = src[srcIndex++];
+                }
             }
             x -= 2;
         }
@@ -325,8 +296,8 @@ public class Plan {
 
         //Alignment box
         Version.VersionInfo versionInfo = Version.VERSION_INFOS[version.getVersion()];
-        for(int x = 4;x + 5 < size; x++) {
-            for(int y = 4;y + 5 < size; y++) {
+        for(int x = 4;x + 5 < size;) {
+            for(int y = 4;y + 5 < size;) {
                 // don't overwrite timing markers
                 if ((x < 7 && y < 7) || (x < 7 && y+5 >= size-7) || (x+5 >= size-7 && y < 7)) {
                 } else {
@@ -393,8 +364,8 @@ public class Plan {
         int inputHeight = pixels.length;
         int qrWidth = inputWidth + (quietZone * 2);
         int qrHeight = inputHeight + (quietZone * 2);
-        int outputWidth = Math.max(inputWidth*scale, qrWidth);
-        int outputHeight = Math.max(inputHeight*scale, qrHeight);
+        int outputWidth = qrWidth*scale;
+        int outputHeight = qrHeight*scale;
 
         int multiple = scale;
         // Padding includes both the quiet zone and the extra white pixels to accommodate the requested
@@ -429,29 +400,34 @@ public class Plan {
 
     private static void setAlignBox(Pixel[][] pixels, int x, int y) {
         // box
-        Pixel pixel = new Pixel(Pixel.PixelRole.ALIGNMENT);
+        Pixel pixelWhite = new Pixel(Pixel.PixelRole.ALIGNMENT);
+        Pixel pixelBlack = new Pixel(Pixel.PixelRole.ALIGNMENT);
+        pixelBlack.orPixelValue(Pixel.BLACK.getPixelValue());
+
         for (int dy = 0; dy < 5; dy++) {
             for (int dx = 0; dx < 5; dx++) {
-                Pixel p = pixel;
                 if (dx == 0 || dx == 4 || dy == 0 || dy == 4 || dx == 2 && dy == 2) {
-                    p.orPixelValue(Pixel.BLACK.getPixelValue());
+                    pixels[y+dy][x+dx] = pixelBlack;
+                } else {
+                    pixels[y + dy][x + dx] = pixelWhite;
                 }
-                pixels[y+dy][x+dx] = p;
             }
         }
     }
 
     private static void setPositionBox(Pixel[][] pixels, int x, int y) {
-        Pixel pixel = new Pixel(Pixel.PixelRole.POSITION);
+        Pixel pixelWhite = new Pixel(Pixel.PixelRole.POSITION);
+        Pixel pixelBlack = new Pixel(Pixel.PixelRole.POSITION);
+        pixelBlack.orPixelValue(Pixel.BLACK.getPixelValue());
 
         //box
         for (int dy = 0; dy < 7; dy++) {
             for (int dx = 0; dx < 7; dx++) {
-                Pixel p = pixel;
                 if (dx == 0 || dx == 6 || dy == 0 || dy == 6 || 2 <= dx && dx <= 4 && 2 <= dy && dy <= 4) {
-                    p.orPixelValue(Pixel.BLACK.getPixelValue());
+                    pixels[y+dy][x+dx] = pixelBlack;
+                } else {
+                    pixels[y + dy][x + dx] = pixelWhite;
                 }
-                pixels[y+dy][x+dx] = p;
             }
         }
 
@@ -459,10 +435,10 @@ public class Plan {
         for (int dy = -1; dy < 8; dy++) {
             if (0 <= y+dy && y+dy < pixels.length) {
                 if (x > 0) {
-                    pixels[y+dy][x-1] = pixel;
+                    pixels[y+dy][x-1] = pixelWhite;
                 }
                 if (x+7 < pixels.length) {
-                    pixels[y+dy][x+7] = pixel;
+                    pixels[y+dy][x+7] = pixelWhite;
                 }
             }
         }
@@ -470,10 +446,10 @@ public class Plan {
         for (int dx = -1; dx < 8; dx++) {
             if (0 <= x+dx && x+dx < pixels.length) {
                 if (y > 0) {
-                    pixels[y-1][x+dx] = pixel;
+                    pixels[y-1][x+dx] = pixelWhite;
                 }
                 if (y+7 < pixels.length) {
-                    pixels[y+7][x+dx] = pixel;
+                    pixels[y+7][x+dx] = pixelWhite;
                 }
             }
         }

@@ -8,6 +8,7 @@ import org.apache.commons.imaging.Imaging;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -60,9 +61,11 @@ public class Image {
 
     private int[][] makeTarget(String filename, int size) throws IOException, ImageReadException {
         BufferedImage image = loadImage(filename, size);
-        int[][] target = new int[size][size];
-        for (int y = 0; y < size; ++y) {
-            for (int x = 0; x < size; ++x) {
+        int height = image.getHeight();
+        int width = image.getWidth();
+        int[][] target = new int[height][width];
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
                 int argb = image.getRGB(x, y);
                 int a = (argb >> 24) & 0xFF;
                 int r = (argb >> 16) & 0xFF;
@@ -89,9 +92,9 @@ public class Image {
         int tmpWidth = maxSize;
         int tmpHeight = maxSize;
         if (width > height) {
-            tmpHeight = height * width / maxSize;
+            tmpHeight = tmpHeight * height / width;
         } else {
-            tmpWidth = width * height / maxSize;
+            tmpWidth = tmpWidth * width / height;
         }
 
         BufferedImage finalImage = new BufferedImage(tmpWidth, tmpHeight, BufferedImage.TYPE_INT_ARGB);
@@ -100,6 +103,10 @@ public class Image {
         graphics.dispose();
 
         return finalImage;
+    }
+
+    public int[][] getTarget() {
+        return target;
     }
 
     public Target target(int x, int y) {
@@ -302,7 +309,14 @@ public class Image {
                 Arrays.sort(order, new Comparator<PixelOrder>() {
                     @Override
                     public int compare(PixelOrder o1, PixelOrder o2) {
-                        return o2.getPriority() - o1.getPriority();
+                        if(o2.getPriority() > o1.getPriority()) {
+                            return -1;
+                        }
+                        if(o2.getPriority() == o1.getPriority()) {
+                            return 0;
+                        }
+
+                        return 1;
                     }
                 });
 
@@ -340,9 +354,9 @@ public class Image {
                             pixels[info.getY()][info.getX()] = Pixel.BLACK;
                         }
                     } else {
-                        if(info.isHardZero()) {
-                            throw new QArtException("Hard zero can not set");
-                        }
+//                        if(info.isHardZero()) {
+//                            throw new QArtException("Hard zero can not set");
+//                        }
                         if(mark) {
                             pixels[info.getY()][info.getX()] = new Pixel(0); //todo will cause error?
                         }
@@ -465,7 +479,8 @@ public class Image {
                     PixelInfo info = pixelByOffset[headSize + 10*i + 3];
                     info.setContrast(Integer.MAX_VALUE >> 8);
                     info.setHardZero(true);
-                    errorCount++;
+//                    errorCount++;
+                    v = 999;
                 }
                 numbers[i*3+0] = (byte) (v/100 + '0');
                 numbers[i*3+1] = (byte) (v/10%10 + '0');

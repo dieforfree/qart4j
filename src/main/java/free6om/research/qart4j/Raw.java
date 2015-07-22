@@ -49,7 +49,7 @@ public class Raw implements Encoding {
         bits.write(data.length, rawLength[version.getSize()]);
 
         for(int i = 0;i < data.length;i++) {
-            bits.write(data.length, 8);
+            bits.write(data[i], 8);
         }
     }
 

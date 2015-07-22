@@ -37,13 +37,13 @@ public class Bits {
     }
 
     public boolean get(int i) {
-        return (bits[i / 8] & (1 << (i & 0x07))) != 0;
+        return (bits[i / 8] & (1 << (7 - i & 0x07))) != 0;
     }
 
     public void append(boolean bit) {
         ensureCapacity(size + 1);
         if (bit) {
-            bits[size / 8] |= 1 << (size & 0x07);
+            bits[size / 8] |= 1 << (7 - size & 0x07);
         }
         size++;
     }
