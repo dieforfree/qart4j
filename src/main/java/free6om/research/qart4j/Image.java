@@ -8,12 +8,10 @@ import org.apache.commons.imaging.Imaging;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Random;
@@ -25,7 +23,7 @@ public class Image {
     private static final Logger LOGGER = LoggerFactory.getLogger(Image.class);
 
     private int[][] target;
-    private int divier;
+    private int divider;
     private int dx, dy;
     private String URL;
     private int version;
@@ -59,7 +57,7 @@ public class Image {
         this.onlyDataBits = onlyDataBits;
         this.saveControl = saveControl;
         this.target = makeTarget(filename, 17 + 4*version + size);
-        this.divier = calculateDivider();
+        this.divider = calculateDivider();
     }
 
     private int[][] makeTarget(String filename, int size) throws IOException, ImageReadException {
@@ -321,7 +319,7 @@ public class Image {
                     PixelOrder po = order[i];
                     PixelInfo info = pixelByOffset[po.getOffset()];
                     int value = ((int)info.getTarget())&0xFF;
-                    if(value < 128) {
+                    if(value < this.divider) {
                         value = 1;
                     } else {
                         value = 0;
