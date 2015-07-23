@@ -3,6 +3,8 @@ package free6om.research.qart4j;
 import com.google.zxing.common.reedsolomon.GenericGF;
 import com.google.zxing.common.reedsolomon.ReedSolomonEncoder;
 
+import java.util.Arrays;
+
 /**
  * Created by free6om on 7/20/15.
  */
@@ -21,6 +23,7 @@ public class Bits {
     }
 
     public void reset() {
+        Arrays.fill(this.bits, (byte) 0);
         this.size = 0;
     }
 

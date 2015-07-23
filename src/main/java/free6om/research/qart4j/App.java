@@ -24,13 +24,7 @@ public class App {
         PropertyConfigurator.configure("src/main/config/log4j.properties");
 
         try {
-//            Plan plan = Plan.newPlan(new Version(7), Level.Q, new Mask(3));
-//            BitMatrix bitMatrix = Plan.encode(plan, 4, 2, new Raw("QR Code Symbol 测试#"), new Number("0123456789"), new Alpha("%0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"));
-
-//            Plan plan = Plan.newPlan(new Version(6), Level.L, new Mask(2));
-//            BitMatrix bitMatrix = Plan.encode(plan, 4, 2, new Raw("http://flkurl.com/mixin#"), new Number("341336767999687512426681334674855848685490760993186151597244699341082462453038256905008000309310469341341340000000000682694128232341256037999999170682941342682253341375999999427041330640952680347298259336021911346094965653290174699880627685898640359505341341712"));
-
-            Image image = new Image("input.png", 4, 4, "http://flkurl.com/mixin",
+            Image image = new Image("mixin-icon.png", 4, 4, "http://flkurl.com/mixin",
                     6/*version*/, 2/*mask*/, 2/*quietZone*/, 4/*scale*/,
                     0/*rotation*/, 0/*size*/, false/*randControl*/, System.currentTimeMillis()/*seed*/,
                     false/*dither*/, false/*onlyDataBits*/, false/*saveControl*/);
@@ -40,24 +34,5 @@ public class App {
             LOGGER.error("encode error", e);
         }
 
-    }
-
-    private static BitMatrix transform(int[][] target) {
-        BitMatrix output = new BitMatrix(target[0].length, target.length);
-
-        int topPadding = 0, leftPadding = 0;
-        int inputHeight = target.length, inputWidth = target[0].length;
-        int multiple = 1;
-
-        for (int inputY = 0, outputY = topPadding; inputY < inputHeight; inputY++, outputY += multiple) {
-            // Write the contents of this row of the barcode
-            for (int inputX = 0, outputX = leftPadding; inputX < inputWidth; inputX++, outputX += multiple) {
-                if(target[inputY][inputX] < 128) {
-                    output.setRegion(outputX, outputY, multiple, multiple);
-                }
-            }
-        }
-
-        return output;
     }
 }

@@ -25,6 +25,7 @@ public class Image {
     private static final Logger LOGGER = LoggerFactory.getLogger(Image.class);
 
     private int[][] target;
+    private int divier;
     private int dx, dy;
     private String URL;
     private int version;
@@ -58,6 +59,7 @@ public class Image {
         this.onlyDataBits = onlyDataBits;
         this.saveControl = saveControl;
         this.target = makeTarget(filename, 17 + 4*version + size);
+        this.divier = calculateDivider();
     }
 
     private int[][] makeTarget(String filename, int size) throws IOException, ImageReadException {
@@ -213,26 +215,24 @@ public class Image {
         }
 
         String url = this.URL + "#";
-        Bits bits;
-        byte[] numbers;
         int errorCount;
 
-        do {
-            bits = new Bits();
-            // Count fixed initial data bits, prepare template URL.
-            new Raw(url).encode(bits, plan.getVersion());
-            new Number("").encode(bits, plan.getVersion());
-            int headSize = bits.getSize();
-            int dataBitsRemaining = plan.getNumberOfDataBytes()*8 - headSize;
-            if(dataBitsRemaining < 0) {
-                throw new QArtException("cannot encode URL into available bits");
-            }
+        Bits bits = new Bits();
+        // Count fixed initial data bits, prepare template URL.
+        new Raw(url).encode(bits, plan.getVersion());
+        new Number("").encode(bits, plan.getVersion());
+        int headSize = bits.getSize();
+        int dataBitsRemaining = plan.getNumberOfDataBytes()*8 - headSize;
+        if(dataBitsRemaining < 0) {
+            throw new QArtException("cannot encode URL into available bits");
+        }
 
-            numbers = new byte[dataBitsRemaining/10*3];
-            Arrays.fill(numbers, (byte) '0');
-            //todo delete pad?
-            bits.pad(dataBitsRemaining);
+        byte[] numbers = new byte[dataBitsRemaining/10*3];
+
+        do {
+            int nd = numberOfDataBytesPerBlock;
             bits.reset();
+            Arrays.fill(numbers, (byte) '0');
 
             new Raw(url).encode(bits, plan.getVersion());
             new Number(new String(numbers)).encode(bits, plan.getVersion());
@@ -248,20 +248,16 @@ public class Image {
             BitBlock[] bitBlocks = new BitBlock[plan.getNumberOfBlocks()];
             for (int blockNumber = 0; blockNumber < plan.getNumberOfBlocks(); blockNumber++) {
                 if (blockNumber == plan.getNumberOfBlocks()-numberOfExtraBytes) {
-                    numberOfDataBytesPerBlock++;
+                    nd++;
                 }
 
-//                byte[] blockDataBytes = Arrays.copyOfRange(data, dataOffset/8, dataOffset/8 + numberOfDataBytesPerBlock);
-//                byte[] blockCheckBytes = Arrays.copyOfRange(data,
-//                        plan.getNumberOfDataBytes()+checkOffset/8,
-//                        plan.getNumberOfDataBytes() + checkOffset/8 + numberOfCheckBytesPerBlock);
-                BitBlock bitBlock = new BitBlock(numberOfDataBytesPerBlock, numberOfCheckBytesPerBlock, encoder,
+                BitBlock bitBlock = new BitBlock(nd, numberOfCheckBytesPerBlock, encoder,
                         data, dataOffset/8,
                         data, plan.getNumberOfDataBytes() + checkOffset/8);
                 bitBlocks[blockNumber] = bitBlock;
 
                 // Determine which bits in this block we can try to edit.
-                int low = 0, high = numberOfDataBytesPerBlock*8;
+                int low = 0, high = nd*8;
                 if(low < headSize - dataOffset) {
                     low = headSize - dataOffset;
                     if(low > high) {
@@ -275,14 +271,13 @@ public class Image {
                     }
                 }
 
-
                 // Preserve [0, lo) and [hi, nd*8).
                 for (int i = 0; i < low; i++) {
                     if (!bitBlock.canSet(i, (byte) ((data[dataOffset/8 + i/8]>>(7-i&7))&1))) {
                         throw new QArtException("cannot preserve required bits");
                     }
                 }
-                for (int i = high; i < numberOfDataBytesPerBlock*8; i++) {
+                for (int i = high; i < nd*8; i++) {
                     if (!bitBlock.canSet(i, (byte) ((data[dataOffset/8 + i/8]>>(7-i&7))&1))) {
                         throw new QArtException("cannot preserve required bits");
                     }
@@ -325,7 +320,6 @@ public class Image {
                 for (int i = 0;i < order.length;i++) {
                     PixelOrder po = order[i];
                     PixelInfo info = pixelByOffset[po.getOffset()];
-                    //todo check value < 128
                     int value = ((int)info.getTarget())&0xFF;
                     if(value < 128) {
                         value = 1;
@@ -346,7 +340,7 @@ public class Image {
                     if (pixel.getPixelRole() == Pixel.PixelRole.DATA) {
                         index = po.getOffset() - dataOffset;
                     } else {
-                        index = po.getOffset() - plan.getNumberOfDataBytes()*8 - checkOffset + numberOfDataBytesPerBlock*8;
+                        index = po.getOffset() - plan.getNumberOfDataBytes()*8 - checkOffset + nd*8;
                     }
                     if (bitBlock.canSet(index, (byte) value)) {
                         info.setBlock(bitBlock);
@@ -367,7 +361,7 @@ public class Image {
                 bitBlock.copyOut();
 
                 boolean cheat = false;
-                for (int i = 0; i < numberOfDataBytesPerBlock*8; i++) {
+                for (int i = 0; i < nd*8; i++) {
                     PixelInfo info = pixelByOffset[dataOffset+i];
                     Pixel pixel = new Pixel(pixels[info.getY()][info.getX()]);
                     if ((bitBlock.getBlockBytes()[i/8]&(1<<(7-i&7))) != 0) {
@@ -384,7 +378,7 @@ public class Image {
                     PixelInfo info = pixelByOffset[plan.getNumberOfDataBytes()*8 + checkOffset + i];
                     Pixel pixel = new Pixel(pixels[info.getY()][info.getX()]);
 
-                    if ((bitBlock.getBlockBytes()[numberOfDataBytesPerBlock+i/8]&(1<<(7-i&7))) != 0) {
+                    if ((bitBlock.getBlockBytes()[nd+i/8]&(1<<(7-i&7))) != 0) {
                         pixel.xorPixel(Pixel.BLACK.getPixel());
                     }
                     expect[info.getY()][info.getX()] = ((pixel.getPixel()&Pixel.BLACK.getPixel()) != 0);
@@ -395,7 +389,7 @@ public class Image {
                     }
                 }
 
-                dataOffset += numberOfDataBytesPerBlock * 8;
+                dataOffset += nd * 8;
                 checkOffset += numberOfCheckBytesPerBlock * 8;
             }
 
@@ -468,7 +462,6 @@ public class Image {
 
             errorCount = 0;
             // Copy numbers back out.
-            LOGGER.debug("dataBitsRemaining: {}", dataBitsRemaining);
             for (int i = 0; i < dataBitsRemaining/10; i++) {
                 // Pull out 10 bits.
                 int v = 0;
@@ -542,6 +535,23 @@ public class Image {
 //        }
 
         return bitMatrix;
+    }
+
+    private int calculateDivider() {
+        long sum = 0;
+        int n = 0;
+        for(int i = 0;i < this.target.length;i++) {
+            for(int j = 0;j < this.target[i].length;j++) {
+                sum += this.target[i][j];
+                n++;
+            }
+        }
+
+        if(n == 0) {
+            return 128;
+        }
+
+        return (int) (sum/n);
     }
 
     private void addDither(PixelInfo[] pixelByOffset, Pixel pixel, int error) {
