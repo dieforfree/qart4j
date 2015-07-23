@@ -13,6 +13,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Random;
@@ -198,7 +199,7 @@ public class Image {
         for(int y = 0;y < pixels.length;y++) {
             for(int x = 0;x < pixels[y].length;x++) {
                 Pixel pixel = pixels[y][x];
-                expect[y][x] = ((pixel.getPixelValue()&Pixel.BLACK.getPixelValue()) != 0);
+                expect[y][x] = ((pixel.getPixel()&Pixel.BLACK.getPixel()) != 0);
 
                 Target target = target(x, y);
                 if(randControl && target.contrast >= 0) {
@@ -206,7 +207,7 @@ public class Image {
                 }
                 Pixel.PixelRole role = pixel.getPixelRole();
                 if(role == Pixel.PixelRole.DATA || role == Pixel.PixelRole.CHECK) {
-                    pixelByOffset[pixel.getOffset()] = new PixelInfo(x, y, pixel, target.target, target.contrast);
+                    pixelByOffset[pixel.getOffset()] = new PixelInfo(x, y, new Pixel(pixel), target.target, target.contrast);
                 }
             }
         }
@@ -250,7 +251,7 @@ public class Image {
                     numberOfDataBytesPerBlock++;
                 }
 
-                byte[] blockDataBytes = Arrays.copyOfRange(data, dataOffset/8, dataOffset/8 + numberOfDataBytesPerBlock);
+//                byte[] blockDataBytes = Arrays.copyOfRange(data, dataOffset/8, dataOffset/8 + numberOfDataBytesPerBlock);
 //                byte[] blockCheckBytes = Arrays.copyOfRange(data,
 //                        plan.getNumberOfDataBytes()+checkOffset/8,
 //                        plan.getNumberOfDataBytes() + checkOffset/8 + numberOfCheckBytesPerBlock);
@@ -277,12 +278,12 @@ public class Image {
 
                 // Preserve [0, lo) and [hi, nd*8).
                 for (int i = 0; i < low; i++) {
-                    if (!bitBlock.canSet(i, (byte) ((blockDataBytes[i/8]>>(7-i&7))&1))) {
+                    if (!bitBlock.canSet(i, (byte) ((data[dataOffset/8 + i/8]>>(7-i&7))&1))) {
                         throw new QArtException("cannot preserve required bits");
                     }
                 }
                 for (int i = high; i < numberOfDataBytesPerBlock*8; i++) {
-                    if (!bitBlock.canSet(i, (byte) ((blockDataBytes[i/8]>>(7-i&7))&1))) {
+                    if (!bitBlock.canSet(i, (byte) ((data[dataOffset/8 + i/8]>>(7-i&7))&1))) {
                         throw new QArtException("cannot preserve required bits");
                     }
                 }
@@ -310,13 +311,13 @@ public class Image {
                     @Override
                     public int compare(PixelOrder o1, PixelOrder o2) {
                         if(o2.getPriority() > o1.getPriority()) {
-                            return -1;
+                            return 1;
                         }
                         if(o2.getPriority() == o1.getPriority()) {
                             return 0;
                         }
 
-                        return 1;
+                        return -1;
                     }
                 });
 
@@ -333,7 +334,7 @@ public class Image {
                     }
 
                     Pixel pixel = info.getPixel();
-                    if((pixel.getPixelValue()&Pixel.INVERT.getPixelValue()) != 0) {
+                    if(pixel.shouldInvert()) {
                         value ^= 1;
                     }
                     if(info.isHardZero()) {
@@ -354,6 +355,7 @@ public class Image {
                             pixels[info.getY()][info.getX()] = Pixel.BLACK;
                         }
                     } else {
+//                        LOGGER.debug("can't set, i: {}, high - low: {}", i, (high - low));
 //                        if(info.isHardZero()) {
 //                            throw new QArtException("Hard zero can not set");
 //                        }
@@ -367,31 +369,36 @@ public class Image {
                 boolean cheat = false;
                 for (int i = 0; i < numberOfDataBytesPerBlock*8; i++) {
                     PixelInfo info = pixelByOffset[dataOffset+i];
-                    Pixel pixel = pixels[info.getY()][info.getX()];
+                    Pixel pixel = new Pixel(pixels[info.getY()][info.getX()]);
                     if ((bitBlock.getBlockBytes()[i/8]&(1<<(7-i&7))) != 0) {
-                        pixel.xorPixelValue(Pixel.BLACK.getPixelValue());
+                        pixel.xorPixel(Pixel.BLACK.getPixel());
                     }
-                    expect[info.getY()][info.getX()] = ((pixel.getPixelValue()&Pixel.BLACK.getPixelValue()) != 0);
+                    expect[info.getY()][info.getX()] = ((pixel.getPixel()&Pixel.BLACK.getPixel()) != 0);
                     if (cheat) {
-                        pixels[info.getY()][info.getX()] = new Pixel((pixel.getPixelValue()&Pixel.BLACK.getPixelValue()));
+                        Pixel p = new Pixel(pixel);
+                        p.setPixel(Pixel.BLACK.getPixel());
+                        pixels[info.getY()][info.getX()] = p;
                     }
                 }
                 for (int i = 0; i < numberOfCheckBytesPerBlock*8; i++) {
                     PixelInfo info = pixelByOffset[plan.getNumberOfDataBytes()*8 + checkOffset + i];
-                    Pixel pixel = pixels[info.getY()][info.getX()];
+                    Pixel pixel = new Pixel(pixels[info.getY()][info.getX()]);
 
                     if ((bitBlock.getBlockBytes()[numberOfDataBytesPerBlock+i/8]&(1<<(7-i&7))) != 0) {
-                        pixel.xorPixelValue(Pixel.BLACK.getPixelValue());
+                        pixel.xorPixel(Pixel.BLACK.getPixel());
                     }
-                    expect[info.getY()][info.getX()] = ((pixel.getPixelValue()&Pixel.BLACK.getPixelValue()) != 0);
+                    expect[info.getY()][info.getX()] = ((pixel.getPixel()&Pixel.BLACK.getPixel()) != 0);
                     if (cheat) {
-                        pixels[info.getY()][info.getX()] = new Pixel((pixel.getPixelValue()&Pixel.BLACK.getPixelValue()));
+                        Pixel p = new Pixel(pixel);
+                        p.setPixel(Pixel.BLACK.getPixel());
+                        pixels[info.getY()][info.getX()] = p;
                     }
                 }
 
                 dataOffset += numberOfDataBytesPerBlock * 8;
                 checkOffset += numberOfCheckBytesPerBlock * 8;
             }
+
 
             // Pass over all pixels again, dithering.
             if (this.dither) {
@@ -424,7 +431,7 @@ public class Image {
                             grayValue = 255;
                         }
                         byte bitValue = pixelValue;
-                        if ((pixel.getPixelValue()&Pixel.INVERT.getPixelValue()) != 0) {
+                        if (pixel.shouldInvert()) {
                             bitValue ^= 1;
                         }
                         if (info.isHardZero() && bitValue != 0) {
@@ -461,6 +468,7 @@ public class Image {
 
             errorCount = 0;
             // Copy numbers back out.
+            LOGGER.debug("dataBitsRemaining: {}", dataBitsRemaining);
             for (int i = 0; i < dataBitsRemaining/10; i++) {
                 // Pull out 10 bits.
                 int v = 0;
@@ -479,24 +487,26 @@ public class Image {
                     PixelInfo info = pixelByOffset[headSize + 10*i + 3];
                     info.setContrast(Integer.MAX_VALUE >> 8);
                     info.setHardZero(true);
-//                    errorCount++;
-                    v = 999;
+                    errorCount++;
+//                    v = 999;
                 }
                 numbers[i*3+0] = (byte) (v/100 + '0');
                 numbers[i*3+1] = (byte) (v/10%10 + '0');
                 numbers[i*3+2] = (byte) (v%10 + '0');
             }
+
         } while (errorCount > 0);
+
 
         Bits finalBits = new Bits();
         new Raw(url).encode(finalBits, plan.getVersion());
         new Number(new String(numbers)).encode(finalBits, plan.getVersion());
         finalBits.addCheckBytes(plan.getVersion(), plan.getLevel());
 
-//        if(!Arrays.equals(finalBits.getBits(), bits.getBits())) {
-//            LOGGER.warn("mismatch\n{} {}\n{} {}\n", bits.getBits().length, bits.getBits(), finalBits.getBits().length, finalBits.getBits());
-//            throw new QArtException("byte mismatch");
-//        }
+        if(!Arrays.equals(finalBits.getBits(), bits.getBits())) {
+            LOGGER.warn("mismatch\n{} {}\n{} {}\n", bits.getBits().length, bits.getBits(), finalBits.getBits().length, finalBits.getBits());
+            throw new QArtException("byte mismatch");
+        }
 
         BitMatrix bitMatrix = Plan.encode(plan, scale, quietZone, new Raw(url), new Number(new String(numbers)));
 

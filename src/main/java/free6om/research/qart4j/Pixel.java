@@ -2,6 +2,10 @@ package free6om.research.qart4j;
 
 /**
  *
+ * ----------------------------------------------------------------------------------
+ * | 26bits for offset | 4bits for Role | 1bit for invert | 1bit for black or white |
+ * ----------------------------------------------------------------------------------
+ *
  * Created by free6om on 7/20/15.
  */
 public class Pixel {
@@ -34,6 +38,10 @@ public class Pixel {
         this.data = role.ordinal() << 2;
     }
 
+    public Pixel(Pixel pixel) {
+        this.data = pixel.data;
+    }
+
     public int getOffset() {
         return data >> 6;
     }
@@ -51,17 +59,26 @@ public class Pixel {
         return PixelRole.values()[ordinal];
     }
 
-    public int getPixelValue() {
-        return this.data & 0x03;
+    public boolean shouldInvert() {
+        return ((data>>1)&0x1) == 1;
     }
-    public void setPixelValue(int value) {
-        this.data = ((this.data >> 2 << 2) | (value&0x03));
+
+    public void setInvert(boolean invert) {
+        int i = invert ? 1 : 0;
+        this.data = (this.data >> 2 << 2) | (i << 1) | (this.data & 0x1);
     }
-    public void orPixelValue(int value) {
-        this.data |= (value & 0x03);
+
+    public int getPixel() {
+        return this.data & 0x01;
     }
-    public void xorPixelValue(int value) {
-        this.data ^= (value & 0x03);
+    public void setPixel(int value) {
+        this.data = ((this.data >> 1 << 1) | (value&0x01));
+    }
+    public void orPixel(int value) {
+        this.data |= (value & 0x01);
+    }
+    public void xorPixel(int value) {
+        this.data ^= (value & 0x01);
     }
 
 }

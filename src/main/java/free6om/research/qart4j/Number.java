@@ -34,7 +34,7 @@ public class Number implements Encoding {
         bits.write(1, 4);
         bits.write(numbers.length(), numberLength[version.getSize()]);
         int i = 0;
-        for(i = 0;i+3 < numbers.length();i += 3) {
+        for(i = 0;i+3 <= numbers.length();i += 3) {
             int w = (numbers.charAt(i) - '0') * 100 + (numbers.charAt(i+1) - '0') * 10 + (numbers.charAt(i+2) - '0');
             bits.write(w, 10);
         }

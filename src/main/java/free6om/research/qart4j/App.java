@@ -30,7 +30,10 @@ public class App {
 //            Plan plan = Plan.newPlan(new Version(6), Level.L, new Mask(2));
 //            BitMatrix bitMatrix = Plan.encode(plan, 4, 2, new Raw("http://flkurl.com/mixin#"), new Number("341336767999687512426681334674855848685490760993186151597244699341082462453038256905008000309310469341341340000000000682694128232341256037999999170682941342682253341375999999427041330640952680347298259336021911346094965653290174699880627685898640359505341341712"));
 
-            Image image = new Image("input.png", 4, 4, "http://flkurl.com/mixin", 6, 2, 2, 4, 0, 0, false, System.currentTimeMillis(), false, false, false);
+            Image image = new Image("input.png", 4, 4, "http://flkurl.com/mixin",
+                    6/*version*/, 2/*mask*/, 2/*quietZone*/, 4/*scale*/,
+                    0/*rotation*/, 0/*size*/, false/*randControl*/, System.currentTimeMillis()/*seed*/,
+                    false/*dither*/, false/*onlyDataBits*/, false/*saveControl*/);
             BitMatrix bitMatrix = image.encode();
             MatrixToImageWriter.writeToPath(bitMatrix, "PNG", Paths.get("output.png"));
         } catch (Exception e) {

@@ -96,7 +96,8 @@ public class Plan {
                 Pixel.PixelRole role = pixel.getPixelRole();
                 if((role == Pixel.PixelRole.DATA || role == Pixel.PixelRole.CHECK || role == Pixel.PixelRole.EXTRA) &&
                         plan.mask.shouldInvert(y, x)) {
-                    pixel.xorPixelValue(Pixel.BLACK.getPixelValue() | Pixel.INVERT.getPixelValue());
+                    pixel.setInvert(!pixel.shouldInvert());
+                    pixel.xorPixel(Pixel.BLACK.getPixel());
                 }
             }
         }
@@ -240,10 +241,11 @@ public class Plan {
             Pixel pixel = new Pixel(Pixel.PixelRole.FORMAT);
             pixel.setOffset(i);
             if (((formatBit>>i)&1) == 1) {
-                pixel.orPixelValue(Pixel.BLACK.getPixelValue());
+                pixel.orPixel(Pixel.BLACK.getPixel());
             }
             if (((invert>>i)&1) == 1) {
-                pixel.xorPixelValue(Pixel.BLACK.getPixelValue() | Pixel.INVERT.getPixelValue());
+                pixel.setInvert(!pixel.shouldInvert());
+                pixel.xorPixel(Pixel.BLACK.getPixel());
             }
             // top left
             if(i < 6) {
@@ -282,7 +284,7 @@ public class Plan {
         for(int i = 0;i < size;i++) {
             Pixel pixel = new Pixel(Pixel.PixelRole.TIMING);
             if((i&1) == 0) {
-                pixel.orPixelValue(Pixel.BLACK.getPixelValue());
+                pixel.orPixel(Pixel.BLACK.getPixel());
             }
 
             pixels[i][timingPosition] = pixel;
@@ -324,7 +326,7 @@ public class Plan {
                 for (int y = 0; y < 3; y++) {
                     Pixel pixel = new Pixel(Pixel.PixelRole.VERSION_PATTERN);
                     if ((pattern&1) != 0) {
-                        pixel.orPixelValue(Pixel.BLACK.getPixelValue());
+                        pixel.orPixel(Pixel.BLACK.getPixel());
                     }
 
                     pixels[size-11+y][x] = pixel;
@@ -335,7 +337,7 @@ public class Plan {
         }
 
         Pixel pixel = new Pixel(Pixel.PixelRole.UNUSED);
-        pixel.orPixelValue(Pixel.BLACK.getPixelValue());
+        pixel.orPixel(Pixel.BLACK.getPixel());
         pixels[size - 8][8] = pixel;
 
         return plan;
@@ -380,19 +382,19 @@ public class Plan {
         for (int inputY = 0, outputY = topPadding; inputY < inputHeight; inputY++, outputY += multiple) {
             // Write the contents of this row of the barcode
             for (int inputX = 0, outputX = leftPadding; inputX < inputWidth; inputX++, outputX += multiple) {
-                Pixel pixel = pixels[inputY][inputX];
+                Pixel pixel = new Pixel(pixels[inputY][inputX]);
                 Pixel.PixelRole role = pixel.getPixelRole();
                 if(role == Pixel.PixelRole.DATA || role == Pixel.PixelRole.CHECK) {
                     int offset = pixel.getOffset();
                     int value = (bytes[offset/8]>>(7-offset&7))&0x1;
-                    if((pixel.getPixelValue()&Pixel.INVERT.getPixelValue()) != 0) {
-                        pixel.xorPixelValue(value);
+                    if(pixel.shouldInvert()) {
+                        pixel.xorPixel(value);
                     } else {
-                        pixel.setPixelValue(value);
+                        pixel.setPixel(value);
                     }
                 }
 
-                if((pixel.getPixelValue()&Pixel.BLACK.getPixelValue()) != 0) {
+                if((pixel.getPixel()&Pixel.BLACK.getPixel()) != 0) {
                     output.setRegion(outputX, outputY, multiple, multiple);
                 }
             }
@@ -405,7 +407,7 @@ public class Plan {
         // box
         Pixel pixelWhite = new Pixel(Pixel.PixelRole.ALIGNMENT);
         Pixel pixelBlack = new Pixel(Pixel.PixelRole.ALIGNMENT);
-        pixelBlack.orPixelValue(Pixel.BLACK.getPixelValue());
+        pixelBlack.setPixel(Pixel.BLACK.getPixel());
 
         for (int dy = 0; dy < 5; dy++) {
             for (int dx = 0; dx < 5; dx++) {
@@ -421,7 +423,7 @@ public class Plan {
     private static void setPositionBox(Pixel[][] pixels, int x, int y) {
         Pixel pixelWhite = new Pixel(Pixel.PixelRole.POSITION);
         Pixel pixelBlack = new Pixel(Pixel.PixelRole.POSITION);
-        pixelBlack.orPixelValue(Pixel.BLACK.getPixelValue());
+        pixelBlack.setPixel(Pixel.BLACK.getPixel());
 
         //box
         for (int dy = 0; dy < 7; dy++) {
