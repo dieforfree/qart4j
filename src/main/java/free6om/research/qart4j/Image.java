@@ -402,7 +402,8 @@ public class Image {
                     Pixel[] row = pixels[y];
                     for(int x = 0;x < row.length;x++) {
                         Pixel pixel = row[x];
-                        if (pixel.getPixelRole() != Pixel.PixelRole.DATA && pixel.getPixelRole() != Pixel.PixelRole.CHECK) {
+                        Pixel.PixelRole role = pixel.getPixelRole();
+                        if (role != Pixel.PixelRole.DATA && role != Pixel.PixelRole.CHECK) {
                             continue;
                         }
                         PixelInfo info = pixelByOffset[pixel.getOffset()];
@@ -417,7 +418,7 @@ public class Image {
                         int grayValue = 0;
                         int targ = info.getDitherTarget();
 
-                        if (targ >= 128) {
+                        if (targ >= this.divider) {
                             // want white
                             pixelValue = 0;
                             grayValue = 255;
@@ -501,18 +502,6 @@ public class Image {
 
         BitMatrix bitMatrix = Plan.encode(plan, scale, quietZone, new Raw(url), new Number(new String(numbers)));
 
-//        if !m.Dither {
-//            for y, row := range expect {
-//                for x, pix := range row {
-//                    if cc.Black(x, y) != pix {
-//                        println("mismatch", x, y, p.Pixel[y][x].String())
-//                    }
-//                }
-//            }
-//        }
-//
-//        m.Code = &qr.Code{Bitmap: cc.Bitmap, Size: cc.Size, Stride: cc.Stride, Scale: m.Scale}
-//
 //        if m.SaveControl {
 //            m.Control = pngEncode(makeImage(req, "", "", 0, cc.Size, 4, m.Scale, func(x, y int) (rgba uint32) {
 //                pix := p.Pixel[y][x]
