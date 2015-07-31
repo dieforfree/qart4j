@@ -62,6 +62,10 @@ public class QArt {
                         .ofType(Integer.class)
                         .describedAs("output QR code size, 0 means don't scale")
                         .defaultsTo(0);
+                acceptsAll(Arrays.asList("opacity")).withOptionalArg()
+                        .ofType(Integer.class)
+                        .describedAs("opacity of the white pixel of the QR code, 0 - 255")
+                        .defaultsTo(255);
                 //how to generate QR code
                 acceptsAll(Arrays.asList("randControl")).withRequiredArg()
                         .ofType(Boolean.class)
@@ -138,6 +142,7 @@ public class QArt {
         int quietZone = (Integer) options.valueOf("q");
         int rotation = (Integer) options.valueOf("r");
         int size = (Integer) options.valueOf("z");
+        int opacity = (Integer) options.valueOf("opacity");
 
         //how to generate QR code
         boolean randControl = (Boolean) options.valueOf("randControl");
@@ -218,8 +223,8 @@ public class QArt {
             QRCode qrCode = image.encode();
             BitMatrix bitMatrix = ImageUtil.makeBitMatrix(qrCode, quietZone, size);
 
-            String tmp = "tmp.png";
-            MatrixToImageWriter.writeToPath(bitMatrix, outputFormat, Paths.get(tmp));
+            MatrixToImageConfig config = new MatrixToImageConfig(MatrixToImageConfig.BLACK, (((opacity&0xFF)<<24) & 0xFFFFFF));
+            BufferedImage finalQrImage = MatrixToImageWriter.toBufferedImage(bitMatrix, config);
 
             Rectangle finalRect = qrRect.union(inputImageRect);
             BufferedImage finalImage = new BufferedImage(finalRect.getAbsoluteWidth(), finalRect.getAbsoluteHeight(), BufferedImage.TYPE_INT_ARGB);
@@ -227,8 +232,7 @@ public class QArt {
             graphics.drawImage(input,
                     inputImageRect.start.x - finalRect.start.x, inputImageRect.start.y - finalRect.start.y,
                     inputImageRect.width, inputImageRect.height, null);
-            BufferedImage qrCodeImage = Imaging.getBufferedImage(new File(tmp));
-            graphics.drawImage(qrCodeImage,
+            graphics.drawImage(finalQrImage,
                     qrRect.start.x - finalRect.start.x, qrRect.start.y - finalRect.start.y,
                     qrRect.width, qrRect.height, null);
             graphics.dispose();
