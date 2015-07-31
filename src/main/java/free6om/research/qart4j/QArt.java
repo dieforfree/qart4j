@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Properties;
 import java.util.Random;
 
 /**
@@ -62,7 +63,11 @@ public class QArt {
                         .ofType(Integer.class)
                         .describedAs("output QR code size, 0 means don't scale")
                         .defaultsTo(0);
-                acceptsAll(Arrays.asList("opacity")).withOptionalArg()
+                acceptsAll(Arrays.asList("ob", "opacityBlack")).withOptionalArg()
+                        .ofType(Integer.class)
+                        .describedAs("opacity of the black pixel of the QR code, 0 - 255")
+                        .defaultsTo(255);
+                acceptsAll(Arrays.asList("ow", "opacityWhite")).withOptionalArg()
                         .ofType(Integer.class)
                         .describedAs("opacity of the white pixel of the QR code, 0 - 255")
                         .defaultsTo(255);
@@ -142,7 +147,8 @@ public class QArt {
         int quietZone = (Integer) options.valueOf("q");
         int rotation = (Integer) options.valueOf("r");
         int size = (Integer) options.valueOf("z");
-        int opacity = (Integer) options.valueOf("opacity");
+        int opacityBlack = (Integer) options.valueOf("ob");
+        int opacityWhite = (Integer) options.valueOf("ow");
 
         //how to generate QR code
         boolean randControl = (Boolean) options.valueOf("randControl");
@@ -166,7 +172,7 @@ public class QArt {
         String outputFormat = (String) options.valueOf("f");
         String output = (String) options.valueOf("o");
 
-        PropertyConfigurator.configure(log4j);
+        configLog(log4j);
 
         //todo validate input params, make sure all of them are valid
 
@@ -223,7 +229,9 @@ public class QArt {
             QRCode qrCode = image.encode();
             BitMatrix bitMatrix = ImageUtil.makeBitMatrix(qrCode, quietZone, size);
 
-            MatrixToImageConfig config = new MatrixToImageConfig(MatrixToImageConfig.BLACK, (((opacity&0xFF)<<24) & 0xFFFFFF));
+            int black = ((opacityBlack&0xFF)<<24);
+            int white = ((opacityWhite&0xFF)<<24) | 0xFFFFFF;
+            MatrixToImageConfig config = new MatrixToImageConfig(black, white);
             BufferedImage finalQrImage = MatrixToImageWriter.toBufferedImage(bitMatrix, config);
 
             Rectangle finalRect = qrRect.union(inputImageRect);
@@ -242,5 +250,20 @@ public class QArt {
             LOGGER.error("encode error", e);
         }
 
+    }
+
+    private static void configLog(String configFile) {
+        if(new File(configFile).exists()) {
+            PropertyConfigurator.configure(configFile);
+            return;
+        }
+
+        Properties properties = new Properties();
+
+        properties.setProperty("log4j.rootLogger", "DEBUG, CA");
+        properties.setProperty("log4j.appender.CA", "org.apache.log4j.ConsoleAppender");
+        properties.setProperty("log4j.appender.CA.layout", "org.apache.log4j.PatternLayout");
+        properties.setProperty("log4j.appender.CA.layout.ConversionPattern", "%d{yyyy-MM-dd HH:mm:ss.SSS} %-4r [%t] %-5p %c %x - %m%n");
+        PropertyConfigurator.configure(properties);
     }
 }
