@@ -1,16 +1,11 @@
 package free6om.research.qart4j;
 
-import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.reedsolomon.GenericGF;
 import com.google.zxing.common.reedsolomon.ReedSolomonEncoder;
 import org.apache.commons.imaging.ImageReadException;
-import org.apache.commons.imaging.Imaging;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -28,8 +23,6 @@ public class Image {
     private String URL;
     private int version;
     private int mask;
-    private int quietZone;
-    private int scale;
     private int rotation;
 
     private boolean randControl;
@@ -42,72 +35,88 @@ public class Image {
     private boolean saveControl;
     private byte[] control;
 
-    public Image(String filename, int dx, int dy, String URL, int version, int mask, int quietZone, int scale, int rotation, int size, boolean randControl, long seed, boolean dither, boolean onlyDataBits, boolean saveControl) throws IOException, ImageReadException {
+    public Image(int[][] target, int dx, int dy, int version) {
+        this.target = target;
+        this.dx = dx;
+        this.dy = dy;
+        this.version = version;
+    }
+
+    public Image(int[][] target, int dx, int dy, String URL,
+                 int version, int mask, int rotation,
+                 boolean randControl, long seed, boolean dither, boolean onlyDataBits, boolean saveControl) throws IOException, ImageReadException {
+        this.target = target;
         this.dx = dx;
         this.dy = dy;
         this.URL = URL;
+
         this.version = version;
         this.mask = mask;
-        this.quietZone = quietZone;
-        this.scale = scale;
         this.rotation = rotation;
+
         this.randControl = randControl;
         this.seed = seed;
         this.dither = dither;
         this.onlyDataBits = onlyDataBits;
         this.saveControl = saveControl;
-        this.target = makeTarget(filename, 17 + 4*version + size);
+
         this.divider = calculateDivider();
     }
 
-    private int[][] makeTarget(String filename, int size) throws IOException, ImageReadException {
-        BufferedImage image = loadImage(filename, size);
-        int height = image.getHeight();
-        int width = image.getWidth();
-        int[][] target = new int[height][width];
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                int argb = image.getRGB(x, y);
-                int a = (argb >> 24) & 0xFF;
-                int r = (argb >> 16) & 0xFF;
-                int g = (argb >> 8) & 0xFF;
-                int b = argb & 0xFF;
-
-                if (a == 0) {
-                    target[y][x] = -1;
-                } else {
-                    target[y][x] = ((299 * r + 587 * g + 114 * b) + 500) / 1000;
-                }
-            }
-        }
-
-        return target;
-
+    public void setTarget(int[][] target) {
+        this.target = target;
     }
 
-    private BufferedImage loadImage(String filename, int maxSize) throws IOException, ImageReadException {
-        BufferedImage image = Imaging.getBufferedImage(new File(filename));
-        int width = image.getWidth();
-        int height = image.getHeight();
-
-        int tmpWidth = maxSize;
-        int tmpHeight = maxSize;
-        if (width > height) {
-            tmpHeight = tmpHeight * height / width;
-        } else {
-            tmpWidth = tmpWidth * width / height;
-        }
-
-        BufferedImage finalImage = new BufferedImage(tmpWidth, tmpHeight, BufferedImage.TYPE_INT_ARGB);
-        Graphics graphics = finalImage.createGraphics();
-        graphics.drawImage(image, 0, 0, tmpWidth, tmpHeight, null);
-        graphics.dispose();
-
-        return finalImage;
+    public void setDivider(int divider) {
+        this.divider = divider;
     }
 
-    public int[][] getTarget() {
-        return target;
+    public void setDx(int dx) {
+        this.dx = dx;
+    }
+
+    public void setDy(int dy) {
+        this.dy = dy;
+    }
+
+    public void setURL(String URL) {
+        this.URL = URL;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
+    }
+
+    public void setMask(int mask) {
+        this.mask = mask;
+    }
+
+    public void setRotation(int rotation) {
+        this.rotation = rotation;
+    }
+
+    public void setRandControl(boolean randControl) {
+        this.randControl = randControl;
+    }
+
+    public void setSeed(long seed) {
+        this.seed = seed;
+    }
+
+    public void setDither(boolean dither) {
+        this.dither = dither;
+    }
+
+    public void setOnlyDataBits(boolean onlyDataBits) {
+        this.onlyDataBits = onlyDataBits;
+    }
+
+    public void setSaveControl(boolean saveControl) {
+        this.saveControl = saveControl;
+    }
+
+    public void setControl(byte[] control) {
+        this.control = control;
     }
 
     public Target target(int x, int y) {
@@ -179,7 +188,7 @@ public class Image {
         plan.setPixels(pixels);
     }
 
-    public BitMatrix encode() throws QArtException {
+    public QRCode encode() throws QArtException {
         Plan plan = Plan.newPlan(new Version(version), Level.L, new Mask(mask));
 
         rotate(plan, rotation);
@@ -500,7 +509,7 @@ public class Image {
             throw new QArtException("byte mismatch");
         }
 
-        BitMatrix bitMatrix = Plan.encode(plan, scale, quietZone, new Raw(url), new Number(new String(numbers)));
+        QRCode qrCode = Plan.encode(plan, new Raw(url), new Number(new String(numbers)));
 
 //        if m.SaveControl {
 //            m.Control = pngEncode(makeImage(req, "", "", 0, cc.Size, 4, m.Scale, func(x, y int) (rgba uint32) {
@@ -521,7 +530,7 @@ public class Image {
 //            }))
 //        }
 
-        return bitMatrix;
+        return qrCode;
     }
 
     private int calculateDivider() {

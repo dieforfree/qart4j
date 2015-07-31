@@ -1,6 +1,5 @@
 package free6om.research.qart4j;
 
-import com.google.zxing.common.BitMatrix;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -345,7 +344,7 @@ public class Plan {
 
     // Note that the input matrix uses 0 == white, 1 == black, while the output matrix uses
     // 0 == black, 255 == white (i.e. an 8 bit greyscale bitmap).
-    public static BitMatrix encode(Plan plan, int scale, int quietZone, Encoding... encodings) throws QArtException {
+    public static QRCode encode(Plan plan, Encoding... encodings) throws QArtException {
         Bits bits = new Bits();
         for(Encoding encoding : encodings) {
             String error = encoding.validate();
@@ -362,45 +361,9 @@ public class Plan {
 
         Pixel[][] pixels = plan.pixels;
 
-        int inputWidth = pixels[0].length;
-        int inputHeight = pixels.length;
-        int qrWidth = inputWidth + (quietZone * 2);
-        int qrHeight = inputHeight + (quietZone * 2);
-        int outputWidth = qrWidth*scale;
-        int outputHeight = qrHeight*scale;
+        return new QRCode(bytes, pixels);
 
-        int multiple = scale;
-        // Padding includes both the quiet zone and the extra white pixels to accommodate the requested
-        // dimensions. For example, if input is 25x25 the QR will be 33x33 including the quiet zone.
-        // If the requested size is 200x160, the multiple will be 4, for a QR of 132x132. These will
-        // handle all the padding from 100x100 (the actual QR) up to 200x160.
-        int leftPadding = (outputWidth - (inputWidth * multiple)) / 2;
-        int topPadding = (outputHeight - (inputHeight * multiple)) / 2;
 
-        BitMatrix output = new BitMatrix(outputWidth, outputHeight);
-
-        for (int inputY = 0, outputY = topPadding; inputY < inputHeight; inputY++, outputY += multiple) {
-            // Write the contents of this row of the barcode
-            for (int inputX = 0, outputX = leftPadding; inputX < inputWidth; inputX++, outputX += multiple) {
-                Pixel pixel = new Pixel(pixels[inputY][inputX]);
-                Pixel.PixelRole role = pixel.getPixelRole();
-                if(role == Pixel.PixelRole.DATA || role == Pixel.PixelRole.CHECK) {
-                    int offset = pixel.getOffset();
-                    int value = (bytes[offset/8]>>(7-offset&7))&0x1;
-                    if(pixel.shouldInvert()) {
-                        pixel.xorPixel(value);
-                    } else {
-                        pixel.setPixel(value);
-                    }
-                }
-
-                if((pixel.getPixel()&Pixel.BLACK.getPixel()) != 0) {
-                    output.setRegion(outputX, outputY, multiple, multiple);
-                }
-            }
-        }
-
-        return output;
     }
 
     private static void setAlignBox(Pixel[][] pixels, int x, int y) {

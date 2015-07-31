@@ -5,3 +5,4 @@ out/
 target/
 *.log
 *.png
+.DS_Store

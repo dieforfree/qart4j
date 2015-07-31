@@ -9,6 +9,7 @@ import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -26,27 +27,21 @@ public class QArt {
     public static void main(String[] args) {
         OptionParser parser = new OptionParser() {
             {
-                acceptsAll(Arrays.asList("help", "?", "h"), "show this help.");
+                acceptsAll(Arrays.asList("help", "?"), "show this help.");
                 acceptsAll(Arrays.asList("l", "log4j")).withRequiredArg()
                         .ofType(String.class)
                         .describedAs("log config file path.")
                         .defaultsTo("./src/main/config/log4j.properties");
+                //input
                 acceptsAll(Arrays.asList("i", "input")).withRequiredArg()
                         .ofType(String.class)
                         .describedAs("input image file")
                         .defaultsTo("input.png");
-                acceptsAll(Arrays.asList("dx")).withRequiredArg()
-                        .ofType(Integer.class)
-                        .describedAs("start pixel of input image in x direction")
-                        .defaultsTo(0);
-                acceptsAll(Arrays.asList("dy")).withRequiredArg()
-                        .ofType(Integer.class)
-                        .describedAs("start pixel of input image in y direction")
-                        .defaultsTo(0);
                 acceptsAll(Arrays.asList("u", "url")).withRequiredArg()
                         .ofType(String.class)
                         .describedAs("URL to encode")
                         .defaultsTo("http://free6om.me");
+                //output QR code
                 acceptsAll(Arrays.asList("v", "version")).withRequiredArg()
                         .ofType(Integer.class)
                         .describedAs("QR version: 1 - 40")
@@ -59,21 +54,18 @@ public class QArt {
                         .ofType(Integer.class)
                         .describedAs("QR quiet zone")
                         .defaultsTo(2);
-                acceptsAll(Arrays.asList("s", "scale")).withRequiredArg()
-                        .ofType(Integer.class)
-                        .describedAs("output file size/QR code size")
-                        .defaultsTo(4);
                 acceptsAll(Arrays.asList("r", "rotation")).withRequiredArg()
                         .ofType(Integer.class)
                         .describedAs("rotation of the image in clockwise: 0 - 3")
                         .defaultsTo(0);
                 acceptsAll(Arrays.asList("z", "size")).withRequiredArg()
                         .ofType(Integer.class)
-                        .describedAs("not used yet")
+                        .describedAs("output QR code size, 0 means don't scale")
                         .defaultsTo(0);
-                acceptsAll(Arrays.asList("rand")).withRequiredArg()
+                //how to generate QR code
+                acceptsAll(Arrays.asList("randControl")).withRequiredArg()
                         .ofType(Boolean.class)
-                        .describedAs("random select bit to set 0 when needed, not implemented yet")
+                        .describedAs("rand control or not")
                         .defaultsTo(Boolean.FALSE);
                 acceptsAll(Arrays.asList("seed")).withRequiredArg()
                         .ofType(Long.class)
@@ -91,6 +83,29 @@ public class QArt {
                         .ofType(Boolean.class)
                         .describedAs("show pixel we have control")
                         .defaultsTo(Boolean.FALSE);
+                //output image
+                acceptsAll(Arrays.asList("mt", "marginTop")).withOptionalArg()
+                        .ofType(Integer.class)
+                        .describedAs("margin top")
+                        .defaultsTo(0);
+                acceptsAll(Arrays.asList("mb", "marginBottom")).withOptionalArg()
+                        .ofType(Integer.class)
+                        .describedAs("margin bottom");
+                acceptsAll(Arrays.asList("ml", "marginLeft")).withOptionalArg()
+                        .ofType(Integer.class)
+                        .describedAs("margin left")
+                        .defaultsTo(0);
+                acceptsAll(Arrays.asList("mr", "marginRight")).withOptionalArg()
+                        .ofType(Integer.class)
+                        .describedAs("margin right");
+                acceptsAll(Arrays.asList("w", "width")).withRequiredArg()
+                        .ofType(Integer.class)
+                        .describedAs("output image width, 0 means same as input image width")
+                        .defaultsTo(180);
+                acceptsAll(Arrays.asList("h", "height")).withRequiredArg()
+                        .ofType(Integer.class)
+                        .describedAs("output image height, 0 means same as input image height")
+                        .defaultsTo(180);
                 acceptsAll(Arrays.asList("f", "format")).withRequiredArg()
                         .ofType(String.class)
                         .describedAs("output image format")
@@ -103,8 +118,7 @@ public class QArt {
             }
         };
         OptionSet options = parser.parse(args);
-        if (options.hasArgument("help") || options.has("?")
-                || options.has("h")) {
+        if (options.hasArgument("help") || options.has("?")) {
             try {
                 parser.printHelpOn(System.out);
             } catch (IOException e) {
@@ -113,17 +127,20 @@ public class QArt {
         }
 
         String log4j = (String) options.valueOf("l");
-        String input = (String) options.valueOf("i");
-        int dx = (Integer) options.valueOf("dx");
-        int dy = (Integer) options.valueOf("dy");
+
+        //input
+        String filename = (String) options.valueOf("i");
         String url = (String) options.valueOf("u");
+
+        //QR code
         int version = (Integer) options.valueOf("v");
         int mask = (Integer) options.valueOf("m");
         int quietZone = (Integer) options.valueOf("q");
-        int scale = (Integer) options.valueOf("s");
         int rotation = (Integer) options.valueOf("r");
         int size = (Integer) options.valueOf("z");
-        boolean randControl = (Boolean) options.valueOf("rand");
+
+        //how to generate QR code
+        boolean randControl = (Boolean) options.valueOf("randControl");
         long seed = (Long) options.valueOf("seed");
         if (seed == -1) {
             seed = System.currentTimeMillis();
@@ -132,19 +149,91 @@ public class QArt {
         boolean onlyDataBits = (Boolean) options.valueOf("onlyData");
         boolean saveControl = (Boolean) options.valueOf("saveControl");
 
+        //output image
+        int width = (Integer) options.valueOf("w");
+        int height = (Integer) options.valueOf("h");
+
+        Integer marginTop = options.has("mt") ? (Integer) options.valueOf("mt") : null;
+        Integer marginBottom = options.has("mb") ? (Integer) options.valueOf("mb") : null;
+        Integer marginLeft = options.has("ml") ? (Integer) options.valueOf("ml") : null;
+        Integer marginRight = options.has("mr") ? (Integer) options.valueOf("mr") : null;
+
         String outputFormat = (String) options.valueOf("f");
         String output = (String) options.valueOf("o");
 
         PropertyConfigurator.configure(log4j);
 
-        try {
-            Image image = new Image(input, dx, dy, url,
-                    version, mask, quietZone, scale,
-                    rotation, size, randControl, seed,
-                    dither, onlyDataBits, saveControl);
+        //todo validate input params, make sure all of them are valid
 
-            BitMatrix bitMatrix = image.encode();
-            MatrixToImageWriter.writeToPath(bitMatrix, outputFormat, Paths.get(output));
+        try {
+            BufferedImage input = ImageUtil.loadImage(filename, width, height);
+
+            int qrSizeWithoutQuiet = 17 + 4*version;
+            int qrSize = qrSizeWithoutQuiet + quietZone * 2;
+            if(size < qrSize) { //don't scale
+                size = qrSize;
+            }
+            int scale = size / qrSize;
+            int targetQrSizeWithoutQuiet = qrSizeWithoutQuiet * scale;
+
+            Rectangle inputImageRect = new Rectangle(new Point(0, 0), width, height);
+            int startX = 0, startY = 0;
+            if(marginLeft != null) {
+                startX = marginLeft;
+            } else if(marginRight != null) {
+                startX = width - marginRight - size;
+            }
+            if(marginTop != null) {
+                startY = marginTop;
+            } else if(marginBottom != null) {
+                startY = height - marginBottom - size;
+            }
+
+            Rectangle qrRect = new Rectangle(new Point(startX, startY), size, size);
+            Rectangle qrWithoutQuietRect = new Rectangle(new Point(startX + (size-targetQrSizeWithoutQuiet)/2, startY + (size-targetQrSizeWithoutQuiet)/2), targetQrSizeWithoutQuiet, targetQrSizeWithoutQuiet);
+
+            int[][] target = null;
+            int dx = 0, dy = 0;
+            Rectangle targetRect = inputImageRect.intersect(qrWithoutQuietRect);
+            if(targetRect == null) {
+                LOGGER.warn("no intersect zone");
+                target = new int[0][0];
+            } else {
+                BufferedImage targetImage = input.getSubimage(targetRect.start.x, targetRect.start.y, targetRect.width, targetRect.height);
+                int scaledWidth = targetRect.width/scale;
+                int scaledHeight = targetRect.height/scale;
+                BufferedImage scaledImage = new BufferedImage(scaledWidth, scaledHeight, BufferedImage.TYPE_INT_ARGB);
+                Graphics graphics = scaledImage.createGraphics();
+                graphics.drawImage(targetImage, 0, 0, scaledWidth, scaledHeight, null);
+                graphics.dispose();
+
+                target = ImageUtil.makeTarget(scaledImage, 0, 0, scaledWidth, scaledHeight);
+                dx = (qrWithoutQuietRect.start.x - targetRect.start.x)/scale;
+                dy = (qrWithoutQuietRect.start.y - targetRect.start.y)/scale;
+            }
+
+
+            Image image = new Image(target, dx, dy, url, version, mask, rotation, randControl, seed, dither, onlyDataBits, saveControl);
+
+            QRCode qrCode = image.encode();
+            BitMatrix bitMatrix = ImageUtil.makeBitMatrix(qrCode, quietZone, size);
+
+            String tmp = "tmp.png";
+            MatrixToImageWriter.writeToPath(bitMatrix, outputFormat, Paths.get(tmp));
+
+            Rectangle finalRect = qrRect.union(inputImageRect);
+            BufferedImage finalImage = new BufferedImage(finalRect.getAbsoluteWidth(), finalRect.getAbsoluteHeight(), BufferedImage.TYPE_INT_ARGB);
+            Graphics graphics = finalImage.createGraphics();
+            graphics.drawImage(input,
+                    inputImageRect.start.x - finalRect.start.x, inputImageRect.start.y - finalRect.start.y,
+                    inputImageRect.width, inputImageRect.height, null);
+            BufferedImage qrCodeImage = Imaging.getBufferedImage(new File(tmp));
+            graphics.drawImage(qrCodeImage,
+                    qrRect.start.x - finalRect.start.x, qrRect.start.y - finalRect.start.y,
+                    qrRect.width, qrRect.height, null);
+            graphics.dispose();
+
+            ImageIO.write(finalImage, outputFormat, new File(output));
         } catch (Exception e) {
             LOGGER.error("encode error", e);
         }
