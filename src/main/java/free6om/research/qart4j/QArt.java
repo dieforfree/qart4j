@@ -63,14 +63,14 @@ public class QArt {
                         .ofType(Integer.class)
                         .describedAs("output QR code size, 0 means don't scale")
                         .defaultsTo(0);
-                acceptsAll(Arrays.asList("ob", "opacityBlack")).withOptionalArg()
-                        .ofType(Integer.class)
-                        .describedAs("opacity of the black pixel of the QR code, 0 - 255")
-                        .defaultsTo(255);
-                acceptsAll(Arrays.asList("ow", "opacityWhite")).withOptionalArg()
-                        .ofType(Integer.class)
-                        .describedAs("opacity of the white pixel of the QR code, 0 - 255")
-                        .defaultsTo(255);
+                acceptsAll(Arrays.asList("cb", "colorBlack")).withOptionalArg()
+                        .ofType(String.class)
+                        .describedAs("ARGB of the black pixel of the QR code, 0x00000000 - 0xFFFFFFFF")
+                        .defaultsTo("FF000000");
+                acceptsAll(Arrays.asList("cw", "colorWhite")).withOptionalArg()
+                        .ofType(String.class)
+                        .describedAs("ARGB of the white pixel of the QR code, 0x00000000 - 0xFFFFFFFF")
+                        .defaultsTo("FFFFFFFF");
                 //how to generate QR code
                 acceptsAll(Arrays.asList("randControl")).withRequiredArg()
                         .ofType(Boolean.class)
@@ -147,8 +147,8 @@ public class QArt {
         int quietZone = (Integer) options.valueOf("q");
         int rotation = (Integer) options.valueOf("r");
         int size = (Integer) options.valueOf("z");
-        int opacityBlack = (Integer) options.valueOf("ob");
-        int opacityWhite = (Integer) options.valueOf("ow");
+        int colorBlack = (int) Long.parseLong((String) options.valueOf("cb"), 16);
+        int colorWhite = (int) Long.parseLong((String) options.valueOf("cw"), 16);
 
         //how to generate QR code
         boolean randControl = (Boolean) options.valueOf("randControl");
@@ -205,12 +205,13 @@ public class QArt {
 
             int[][] target = null;
             int dx = 0, dy = 0;
+            BufferedImage targetImage = null;
             Rectangle targetRect = inputImageRect.intersect(qrWithoutQuietRect);
             if(targetRect == null) {
                 LOGGER.warn("no intersect zone");
                 target = new int[0][0];
             } else {
-                BufferedImage targetImage = input.getSubimage(targetRect.start.x, targetRect.start.y, targetRect.width, targetRect.height);
+                targetImage = input.getSubimage(targetRect.start.x, targetRect.start.y, targetRect.width, targetRect.height);
                 int scaledWidth = targetRect.width/scale;
                 int scaledHeight = targetRect.height/scale;
                 BufferedImage scaledImage = new BufferedImage(scaledWidth, scaledHeight, BufferedImage.TYPE_INT_ARGB);
@@ -229,9 +230,7 @@ public class QArt {
             QRCode qrCode = image.encode();
             BitMatrix bitMatrix = ImageUtil.makeBitMatrix(qrCode, quietZone, size);
 
-            int black = ((opacityBlack&0xFF)<<24);
-            int white = ((opacityWhite&0xFF)<<24) | 0xFFFFFF;
-            MatrixToImageConfig config = new MatrixToImageConfig(black, white);
+            MatrixToImageConfig config = new MatrixToImageConfig(colorBlack, colorWhite);
             BufferedImage finalQrImage = MatrixToImageWriter.toBufferedImage(bitMatrix, config);
 
             Rectangle finalRect = qrRect.union(inputImageRect);
