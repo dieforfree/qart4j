@@ -234,7 +234,7 @@ public class QArt {
             BufferedImage finalQrImage = MatrixToImageWriter.toBufferedImage(bitMatrix, config);
 
             Rectangle finalRect = qrRect.union(inputImageRect);
-            BufferedImage finalImage = new BufferedImage(finalRect.getAbsoluteWidth(), finalRect.getAbsoluteHeight(), BufferedImage.TYPE_INT_ARGB);
+            BufferedImage finalImage = new BufferedImage(finalRect.width, finalRect.height, BufferedImage.TYPE_INT_ARGB);
             Graphics graphics = finalImage.createGraphics();
             graphics.drawImage(input,
                     inputImageRect.start.x - finalRect.start.x, inputImageRect.start.y - finalRect.start.y,

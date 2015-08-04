@@ -26,14 +26,6 @@ public class Rectangle {
         this.height = height;
     }
 
-    public int getAbsoluteWidth() {
-        return this.width - this.start.x;
-    }
-
-    public int getAbsoluteHeight() {
-        return this.height - this.start.y;
-    }
-
     public Rectangle intersect(Rectangle other) {
         if(other == null || other.start == null || this.start == null) {
             return null;
