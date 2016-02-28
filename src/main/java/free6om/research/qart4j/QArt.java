@@ -127,7 +127,7 @@ public class QArt {
             }
         };
         OptionSet options = parser.parse(args);
-        if (options.hasArgument("help") || options.has("?")) {
+        if (options.hasArgument("help") || options.has("?") || args.length == 0) {
             try {
                 parser.printHelpOn(System.out);
             } catch (IOException e) {
