@@ -31,3 +31,6 @@ java -jar qart4j.jar \
 
 ##Known issues##
 1. JPEG not work yet.
+
+##License##
+[GPLv3](LICENSE.txt)
