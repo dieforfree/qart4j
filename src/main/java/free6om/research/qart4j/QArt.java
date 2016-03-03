@@ -237,7 +237,7 @@ public class QArt {
             BufferedImage finalQrImage = MatrixToImageWriter.toBufferedImage(bitMatrix, config);
 
             Rectangle finalRect = qrRect.union(inputImageRect);
-            BufferedImage finalImage = new BufferedImage(finalRect.width, finalRect.height, BufferedImage.TYPE_INT_ARGB);
+            BufferedImage finalImage = new BufferedImage(finalRect.width, finalRect.height, BufferedImage.TYPE_INT_RGB);
             Graphics graphics = finalImage.createGraphics();
 
             graphics.drawImage(input,
@@ -248,16 +248,7 @@ public class QArt {
                     qrRect.width, qrRect.height, null);
             graphics.dispose();
 
-            // Creating a non Alpha channel bufferedImage so that alpha channel does not corrupt jpeg.
-            BufferedImage nonAlpha = new BufferedImage(finalImage.getWidth(), finalImage.getHeight(), BufferedImage.TYPE_INT_RGB);
-            Graphics nonAlphaGraphics = nonAlpha.createGraphics();
-
-            nonAlphaGraphics.setColor(Color.white);
-            nonAlphaGraphics.fillRect(0,0, finalImage.getWidth(), finalImage.getHeight());
-            nonAlphaGraphics.drawImage(finalImage, 0, 0, null);
-            nonAlphaGraphics.dispose();
-
-            ImageIO.write(nonAlpha, outputFormat , new File(output));
+            ImageIO.write(finalImage, outputFormat , new File(output));
 
         } catch (Exception e) {
             LOGGER.error("encode error", e);
