@@ -1,6 +1,7 @@
 package free6om.research.qart4j;
 
 import com.google.zxing.common.BitMatrix;
+import com.sun.imageio.plugins.jpeg.JPEG;
 import org.apache.commons.imaging.ImageReadException;
 import org.apache.commons.imaging.Imaging;
 
@@ -37,7 +38,12 @@ public class ImageUtil {
     }
 
     public static BufferedImage loadImage(String filename, int width, int height) throws IOException, ImageReadException {
-        BufferedImage image = Imaging.getBufferedImage(new File(filename));
+
+        File file = new File(filename);
+        BufferedImage image = ImageIO.read(file);
+
+        //BufferedImage image = Imaging.getBufferedImage(file);
+        //This was the reason jpeg was not supported. ImageIO handles the type conversion for us.
 
         BufferedImage finalImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         Graphics graphics = finalImage.createGraphics();
