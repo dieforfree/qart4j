@@ -248,7 +248,7 @@ public class QArt {
                     qrRect.width, qrRect.height, null);
             graphics.dispose();
 
-            if(outputFormat.contentEquals("jpeg")){
+            if(outputFormat.toUpperCase().contentEquals("JPEG")){
                 // Creating a non Alpha channel bufferedImage so that alpha channel does not corrupt jpeg.
                 BufferedImage nonAlpha = new BufferedImage(finalImage.getWidth(), finalImage.getHeight(), BufferedImage.TYPE_INT_RGB);
                 Graphics nonAlphaGraphics = nonAlpha.createGraphics();
