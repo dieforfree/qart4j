@@ -10,6 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -234,8 +237,9 @@ public class QArt {
             BufferedImage finalQrImage = MatrixToImageWriter.toBufferedImage(bitMatrix, config);
 
             Rectangle finalRect = qrRect.union(inputImageRect);
-            BufferedImage finalImage = new BufferedImage(finalRect.width, finalRect.height, BufferedImage.TYPE_INT_ARGB);
+            BufferedImage finalImage = new BufferedImage(finalRect.width, finalRect.height, BufferedImage.TYPE_INT_RGB);
             Graphics graphics = finalImage.createGraphics();
+
             graphics.drawImage(input,
                     inputImageRect.start.x - finalRect.start.x, inputImageRect.start.y - finalRect.start.y,
                     inputImageRect.width, inputImageRect.height, null);
@@ -244,7 +248,21 @@ public class QArt {
                     qrRect.width, qrRect.height, null);
             graphics.dispose();
 
-            ImageIO.write(finalImage, outputFormat, new File(output));
+            if(outputFormat.toUpperCase().contentEquals("JPEG")){
+                // Creating a non Alpha channel bufferedImage so that alpha channel does not corrupt jpeg.
+                BufferedImage nonAlpha = new BufferedImage(finalImage.getWidth(), finalImage.getHeight(), BufferedImage.TYPE_INT_RGB);
+                Graphics nonAlphaGraphics = nonAlpha.createGraphics();
+
+                nonAlphaGraphics.setColor(Color.white);
+                nonAlphaGraphics.fillRect(0,0, finalImage.getWidth(), finalImage.getHeight());
+                nonAlphaGraphics.drawImage(finalImage, 0, 0, null);
+                nonAlphaGraphics.dispose();
+
+                finalImage = nonAlpha;
+            }
+
+            ImageIO.write(finalImage, outputFormat , new File(output));
+
         } catch (Exception e) {
             LOGGER.error("encode error", e);
         }
