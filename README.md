@@ -30,7 +30,7 @@ java -jar qart4j.jar \
 ```
 
 ##Known issues##
-1. JPEG not work yet.
+1. JPEG now works, thanks to [Abhinash Khanal](https://github.com/khanal-abhi).
 
 ##License##
 [GPLv3](LICENSE.txt)
