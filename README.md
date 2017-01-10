@@ -25,7 +25,7 @@ java -jar qart4j.jar \
 -u http://www.imdb.com/title/tt2267968/ \
 -w 324 -h 480  \
 --mr 72 --mb 164 \
--z 168 -v 16 -q 1\
+-z 168 -v 16 -q 1 \
 --cw EFFFFFFF
 ```
 
